@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Livegang verhuur- en roosterdashboard Het Hart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF3F4; --surface:#FFFFFF; --ink:#1B2830; --muted:#5B6B74; --line:#D5DFE2;
+  --water:#2B6E8C; --water-soft:#CFE3EB; --sage:#5E8F6A; --sage-soft:#DCEBDF;
+  --amber:#A86A12; --amber-soft:#F5E6CC; --block:#9AA7AD; --weekend:#E4ECEE;
+  --shadow:0 1px 0 rgba(27,40,48,.06);
+  --font:"Schibsted Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121A1F; --surface:#1A252C; --ink:#E4ECEF; --muted:#9DB0B8; --line:#2C3B44;
+    --water:#6FB2CF; --water-soft:#1F3B48; --sage:#8CC09A; --sage-soft:#203A28;
+    --amber:#E3A84E; --amber-soft:#3A2C14; --block:#5F6F77; --weekend:#172127;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121A1F; --surface:#1A252C; --ink:#E4ECEF; --muted:#9DB0B8; --line:#2C3B44;
+  --water:#6FB2CF; --water-soft:#1F3B48; --sage:#8CC09A; --sage-soft:#203A28;
+  --amber:#E3A84E; --amber-soft:#3A2C14; --block:#5F6F77; --weekend:#172127;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--water);outline-offset:2px;border-radius:3px}
+
+.wrap{max-width:1400px;margin:0 auto;padding:28px 20px 60px}
+header.top{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;margin-bottom:26px}
+h1{font-size:clamp(1.6rem,3.4vw,2.4rem);line-height:1.1;margin:0 0 8px;font-weight:700;letter-spacing:-.01em;max-width:22ch}
+.lede{color:var(--muted);margin:0;max-width:62ch}
+.sync{font-size:.82rem;color:var(--muted);margin-top:10px}
+
+.summary{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:min(520px,100%)}
+.summary div{background:var(--surface);padding:12px 16px}
+.summary .k{font-size:.8rem;color:var(--muted)}
+.summary .v{font-size:1.35rem;font-weight:600;font-variant-numeric:tabular-nums}
+.summary .s{font-size:.78rem;color:var(--muted)}
+.progress{height:6px;background:var(--water-soft);border-radius:3px;margin-top:8px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--water);transition:width .3s}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:0 0 12px;font-size:.88rem;color:var(--muted)}
+.toolbar label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto}
+.legend i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+.board{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.scroller{overflow-x:auto}
+.grid{display:grid;grid-template-columns:minmax(380px,440px) auto;min-width:max-content}
+.left{position:sticky;left:0;z-index:3;background:var(--surface);border-right:1px solid var(--line)}
+.row{height:40px;display:flex;align-items:center;border-bottom:1px solid var(--line)}
+.head{height:48px;position:sticky;top:0;background:var(--surface);z-index:2}
+.left .head{padding:0 14px;font-size:.8rem;color:var(--muted);justify-content:space-between}
+
+.phase{background:var(--bg);font-weight:600;padding:0 14px;gap:10px;font-size:.92rem}
+.phase .pn{color:var(--water);font-variant-numeric:tabular-nums}
+.phase .pc{margin-left:auto;font-weight:400;font-size:.78rem;color:var(--muted)}
+.task{padding:0 10px 0 14px;gap:8px}
+.task input{width:17px;height:17px;accent-color:var(--sage);flex:none;cursor:pointer}
+.task input:disabled{cursor:not-allowed}
+.tid{font-size:.75rem;color:var(--muted);width:30px;flex:none;font-variant-numeric:tabular-nums}
+.tname{flex:1;min-width:0;text-align:left;background:none;border:0;padding:4px 0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tname:hover{color:var(--water);text-decoration:underline;text-underline-offset:3px}
+.task.done .tname{color:var(--muted);text-decoration:line-through}
+.task.ms .tname{font-weight:600}
+.badges{display:flex;gap:4px;flex:none}
+.b{font-size:.7rem;padding:1px 6px;border-radius:9px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.b.cost{background:var(--water-soft);color:var(--water)}
+.b.rec{background:var(--sage-soft);color:var(--sage)}
+.b.wait{background:var(--weekend);color:var(--muted)}
+.b.who{background:var(--amber-soft);color:var(--amber)}
+
+.right{position:relative}
+.cal{display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:4px}
+.weeks{display:flex;font-size:.75rem;color:var(--muted)}
+.weeks div{border-left:1px solid var(--line);padding-left:5px;white-space:nowrap;overflow:hidden}
+.bars{position:relative}
+.bgcol{position:absolute;top:0;bottom:0;background:var(--weekend);pointer-events:none}
+.brow{height:40px;border-bottom:1px solid var(--line);position:relative}
+.brow.phase{background:transparent}
+.bar{position:absolute;top:11px;height:18px;border-radius:4px;background:var(--water);cursor:pointer;border:0;padding:0}
+.bar.legal{background:var(--amber)}
+.bar.practice{background:repeating-linear-gradient(135deg,var(--amber) 0 6px,var(--amber-soft) 6px 9px)}
+.bar.blocked{background:var(--block)}
+.bar.done{background:var(--sage)}
+.bar.span{background:var(--water-soft);top:16px;height:8px;cursor:default}
+.ms-d{position:absolute;top:10px;width:20px;height:20px;transform:rotate(45deg);background:var(--ink);border:0;cursor:pointer;margin-left:-10px;border-radius:2px}
+.ms-d.done{background:var(--sage)}
+svg.links{position:absolute;inset:0;pointer-events:none;overflow:visible}
+svg.links path{fill:none;stroke:var(--muted);stroke-width:1;opacity:.45}
+svg.links path.hot{stroke:var(--water);opacity:1;stroke-width:1.6}
+.hide-links svg.links{display:none}
+
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-top:28px}
+.notes section{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.notes h2{font-size:1.05rem;margin:0 0 10px}
+.notes p,.notes li{color:var(--muted);font-size:.92rem;max-width:68ch}
+.notes table{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}
+.notes td{padding:5px 0;border-bottom:1px solid var(--line)}
+.notes td:last-child{text-align:right;white-space:nowrap}
+.notes tr.tot td{font-weight:600;border-bottom:0;padding-top:9px}
+
+
+.arch{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-top:28px;padding:18px 20px}
+.arch h2{font-size:1.05rem;margin:0 0 4px}
+.arch p{color:var(--muted);font-size:.92rem;margin:0 0 12px;max-width:70ch}
+.arch .sc{overflow-x:auto}
+.arch svg{display:block;min-width:900px;width:100%;height:auto;font-family:var(--font)}
+.arch .frame{fill:var(--water-soft);stroke:var(--water);stroke-width:1}
+.arch .box{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.arch .ext{fill:var(--surface);stroke:var(--sage);stroke-width:1.2}
+.arch .ppl{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.2}
+.arch .t{fill:var(--ink);font-size:13px;font-weight:600}
+.arch .st{fill:var(--muted);font-size:11px}
+.arch .lbl{fill:var(--muted);font-size:11px}
+.arch .grp{fill:var(--water);font-size:12px;font-weight:600}
+.arch .ln{fill:none;stroke:var(--muted);stroke-width:1.2}
+.arch .ln.dash{stroke-dasharray:4 3}
+.arch .ah{fill:var(--muted)}
+/* modal */
+dialog{border:0;padding:0;border-radius:14px;max-width:min(680px,94vw);width:100%;background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(18,26,31,.5)}
+.mh{padding:20px 24px 14px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:10px}
+.mh .meta{font-size:.82rem;color:var(--muted)}
+.mh h3{margin:2px 0 0;font-size:1.3rem;line-height:1.25}
+.x{background:none;border:0;font-size:1.5rem;line-height:1;cursor:pointer;color:var(--muted);padding:4px 8px;align-self:start}
+.mb{padding:16px 24px 8px;max-height:62vh;overflow-y:auto}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.fact{background:var(--bg);border-radius:8px;padding:9px 12px}
+.fact .k{font-size:.75rem;color:var(--muted)}
+.fact .v{font-weight:600;font-size:.95rem}
+.mb h4{font-size:.95rem;margin:16px 0 8px}
+.steps{margin:0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding:0 0 12px 38px;max-width:62ch}
+.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--water-soft);color:var(--water);font-size:.8rem;font-weight:600;display:grid;place-items:center}
+.callout{background:var(--amber-soft);border-radius:8px;padding:10px 14px;font-size:.9rem;margin:10px 0}
+.deps{display:flex;flex-wrap:wrap;gap:6px}
+.dep{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:2px 10px;font-size:.82rem;cursor:pointer}
+.dep.ok{border-color:var(--sage);color:var(--sage)}
+.mf{padding:14px 24px 20px;border-top:1px solid var(--line);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.mf .hint{font-size:.82rem;color:var(--muted)}
+.btn{background:var(--water);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer}
+.btn.undo{background:var(--weekend);color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+@media (max-width:860px){
+  header.top{grid-template-columns:1fr}
+  .summary{min-width:0;grid-template-columns:1fr 1fr 1fr}
+  .grid{grid-template-columns:300px auto}
+  .badges .b.cost,.badges .b.rec{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Livegang verhuur- en roosterdashboard Het Hart</h1>
+      <p class="lede">Van testserver naar productie op naam van de praktijk, onder hethartverloskunde.nl. Klik op een taak of mijlpaal voor het stappenplan, vink af wat klaar is.</p>
+      <div class="sync" id="sync">Voortgang wordt in deze browser bewaard.</div>
+    </div>
+    <div class="summary">
+      <div><div class="k">Voortgang</div><div class="v" id="pct">0%</div><div class="progress"><span id="pbar" style="width:0"></span></div></div>
+      <div><div class="k">Eenmalig</div><div class="v" id="once">€0</div><div class="s">geen eenmalige kosten</div></div>
+      <div><div class="k">Doorlopend</div><div class="v" id="rec">€0</div><div class="s" id="recy">per maand</div></div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <label><input type="checkbox" id="showLinks" checked> Afhankelijkheden tonen</label>
+    <button id="exportBtn" class="btn undo" hidden style="padding:5px 12px;font-size:.85rem">Voortgang exporteren</button>
+    <div class="legend">
+      <span><i style="background:var(--water)"></i>Emiel</span>
+      <span><i style="background:var(--amber)"></i>Juridisch</span>
+      <span><i style="background:repeating-linear-gradient(135deg,var(--amber) 0 4px,var(--amber-soft) 4px 6px)"></i>Praktijk</span>
+      <span><i style="background:var(--block)"></i>Wacht op voorganger</span>
+      <span><i style="background:var(--sage)"></i>Klaar</span>
+    </div>
+  </div>
+
+  <div class="board" id="board">
+    <div class="scroller">
+      <div class="grid">
+        <div class="left" id="left"></div>
+        <div class="right" id="right"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <section class="arch">
+    <h2>Architectuur</h2>
+    <p>Alles in de EU en op naam van de praktijk. Productie en staging zijn volledig gescheiden, staging bevat nooit echte cliëntgegevens.</p>
+    <div class="sc"><svg viewBox="0 0 1100 520" role="img" aria-label="Architectuur van de dashboards: gebruikers via het domein van de praktijk naar Render in Frankfurt, met mail via Brevo en backups naar Hetzner"><defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L8,4 L0,8 z"/></marker></defs><rect class="ppl" x="890" y="6" width="190" height="44" rx="7"/><text class="t" x="902" y="24">Cowork, Emiel</text><text class="st" x="902" y="40">wijzigen, akkoord op productie</text><path class="ln" d="M985,50 V63" marker-end="url(#ah)"/><rect class="frame" x="400" y="20" width="450" height="480" rx="12"/><text class="grp" x="416" y="40">Render, regio Frankfurt, op naam van de praktijk</text><text class="lbl" x="420" y="60">Productie</text><text class="lbl" x="420" y="250">Staging</text><text class="lbl" x="420" y="370">Beheer</text><rect class="ppl" x="20" y="95" width="150" height="56" rx="7"/><text class="t" x="32" y="117">Medewerkers</text><text class="st" x="32" y="134">browser + MFA</text><rect class="ppl" x="20" y="375" width="150" height="56" rx="7"/><text class="t" x="32" y="397">Cliënten</text><text class="st" x="32" y="414">mail en ondertekenen</text><rect class="ext" x="210" y="95" width="160" height="56" rx="7"/><text class="t" x="222" y="117">DNS praktijk</text><text class="st" x="222" y="134">verhuur. en rooster.</text><rect class="box" x="420" y="65" width="180" height="52" rx="7"/><text class="t" x="432" y="87">Verhuurdashboard</text><text class="st" x="432" y="104">Starter, ±€6 p/m</text><rect class="box" x="420" y="135" width="180" height="52" rx="7"/><text class="t" x="432" y="157">Roosterdashboard</text><text class="st" x="432" y="174">Starter, ±€6 p/m</text><rect class="box" x="650" y="65" width="180" height="52" rx="7"/><text class="t" x="662" y="87">Postgres verhuur</text><text class="st" x="662" y="104">±€5 p/m + opslag</text><rect class="box" x="650" y="135" width="180" height="52" rx="7"/><text class="t" x="662" y="157">Postgres rooster</text><text class="st" x="662" y="174">±€5 p/m + opslag</text><rect class="box" x="420" y="255" width="180" height="52" rx="7"/><text class="t" x="432" y="277">2 webservices</text><text class="st" x="432" y="294">gratis, met slaapstand</text><rect class="box" x="650" y="255" width="180" height="52" rx="7"/><text class="t" x="662" y="277">Postgres staging</text><text class="st" x="662" y="294">2 databases, ±€5 p/m</text><rect class="box" x="420" y="375" width="180" height="52" rx="7"/><text class="t" x="432" y="397">Backup-cronjob</text><text class="st" x="432" y="414">elke nacht, ±€1 p/m</text><rect class="box" x="650" y="375" width="180" height="52" rx="7"/><text class="t" x="662" y="397">Render-backups</text><text class="st" x="662" y="414">dagelijks, inbegrepen</text><rect class="ext" x="890" y="65" width="190" height="52" rx="7"/><text class="t" x="902" y="87">GitHub</text><text class="st" x="902" y="104">code, tests, deploys</text><rect class="ext" x="890" y="175" width="190" height="52" rx="7"/><text class="t" x="902" y="197">Brevo e-mail</text><text class="st" x="902" y="214">EU, gratis plan</text><rect class="ext" x="890" y="265" width="190" height="52" rx="7"/><text class="t" x="902" y="287">UptimeRobot</text><text class="st" x="902" y="304">gratis plan</text><rect class="ext" x="890" y="375" width="190" height="52" rx="7"/><text class="t" x="902" y="397">Hetzner Storage Box</text><text class="st" x="902" y="414">Duitsland, ±€4 p/m</text><path class="ln" d="M170,123 H208" marker-end="url(#ah)"/><path class="ln" d="M370,113 H395 V91 H418" marker-end="url(#ah)"/><path class="ln" d="M370,133 H395 V161 H418" marker-end="url(#ah)"/><path class="ln" d="M600,91 H648" marker-end="url(#ah)"/><path class="ln" d="M600,161 H648" marker-end="url(#ah)"/><path class="ln" d="M600,281 H648" marker-end="url(#ah)"/><path class="ln dash" d="M740,117 V133" marker-end="url(#ah)"/><path class="ln dash" d="M600,401 H888" marker-end="url(#ah)"/><text class="lbl" x="612" y="445">versleutelde pg_dump van beide productiedatabases</text><path class="ln" d="M510,65 V48 H865 V199 H888" marker-end="url(#ah)"/><text class="lbl" x="858" y="160" text-anchor="end" transform="rotate(-90 858 160)">mail</text><path class="ln" d="M890,215 H874 V492 H95 V433" marker-end="url(#ah)"/><text class="lbl" x="420" y="487">facturen, overeenkomsten en ondertekenlink per mail</text><path class="ln" d="M170,403 H290 V153" marker-end="url(#ah)"/><text class="lbl" x="182" y="396">ondertekenlink</text><path class="ln dash" d="M890,85 H852" marker-end="url(#ah)"/><text class="lbl" x="985" y="134" text-anchor="middle">staging automatisch,</text><text class="lbl" x="985" y="148" text-anchor="middle">productie via deploy hook</text><path class="ln dash" d="M890,291 H852" marker-end="url(#ah)"/><text class="lbl" x="985" y="334" text-anchor="middle">controleert productie</text></svg></div>
+  </section>
+  <div class="notes">
+    <section>
+      <h2>Kosten op een rij</h2>
+      <table id="costTable"></table>
+      <p>Render rekent in dollars, bedragen zijn omgerekend tegen circa 0,86 en exclusief btw. Prijzen gecontroleerd in oktober 2026, check ze voor het bestellen. Jouw uren zijn niet meegerekend, dit is een vriendendienst.</p>
+    </section>
+    <section>
+      <h2>Aansprakelijkheid in het kort</h2>
+      <p>Kosteloos werken maakt je niet automatisch onaansprakelijk. De verwerkersovereenkomst (A2) regelt je rol bij de cliëntgegevens, beperkt je aansprakelijkheid en laat de praktijk je vrijwaren voor aanspraken van derden.</p>
+      <p>Wat je niet kunt uitsluiten: aansprakelijkheid bij opzet of bewuste roekeloosheid, en je eigen positie richting cliënten en de Autoriteit Persoonsgegevens onder de AVG. Die dek je af met de vrijwaring, door aantoonbaar zorgvuldig te werken en met de schriftelijke acceptatie bij de livegang (F5).</p>
+    </section>
+  </div>
+</div>
+
+<dialog id="dlg" aria-labelledby="dTitle">
+  <div class="mh">
+    <div><div class="meta" id="dMeta"></div><h3 id="dTitle"></h3></div>
+    <button class="x" id="dClose" aria-label="Sluiten">×</button>
+  </div>
+  <div class="mb" id="dBody"></div>
+  <div class="mf">
+    <span class="hint" id="dHint"></span>
+    <button class="btn" id="dToggle">Markeer als klaar</button>
+  </div>
+</dialog>
+
+<script>
+/* ---------- data ---------- */
+const FX = 0.86;
+const PHASES = [
+  {id:"A",name:"Afspraken en juridisch"},
+  {id:"B",name:"Accounts en toegang"},
+  {id:"C",name:"Applicaties productieklaar maken"},
+  {id:"D",name:"Infrastructuur"},
+  {id:"E",name:"Domein en e-mail"},
+  {id:"F",name:"Testen en acceptatie"},
+  {id:"G",name:"Livegang"},
+  {id:"I",name:"Onderhoud vanuit Cowork inrichten"},
+  {id:"H",name:"Nazorg"}
+];
+// kind: dev (Emiel), legal, practice. once/rec in EUR. recNote optional.
+const T = [
+ {id:"A1",ph:"A",name:"Bevestiging scope van Kirsten",s:"2026-10-05",e:"2026-10-05",deps:[],kind:"practice",
+  steps:["Wacht op het antwoord op je mail van vandaag: hosting, testomgeving, lege productiedatabase en echt gebruik.","Vraag in dezelfde mail of de praktijk akkoord is dat de hosting op hun naam komt en dat zij de maandelijkse kosten betalen (circa €34 per maand).","Vraag wie bij de praktijk het domein hethartverloskunde.nl beheert, of de naam van hun webbouwer.","Vraag wie er straks met de dashboards gaan werken, zodat je persoonlijke accounts kunt aanmaken."],
+  note:"Pas na dit akkoord heeft het zin om accounts aan te maken. Zet het akkoord op de kosten zwart op wit, ook al is het een mail."},
+ {id:"A2",ph:"A",name:"Verwerkersovereenkomst opstellen",s:"2026-10-06",e:"2026-10-09",deps:["A1"],kind:"legal",
+  steps:["Neem het Model Verwerkersovereenkomst van NL Digital als basis (gratis te downloaden). Dat model is breed geaccepteerd en past op deze situatie.","Vul in: de praktijk is verwerkingsverantwoordelijke, jij bent verwerker. Render, Brevo en Hetzner zijn subverwerkers, maar omdat de accounts op naam van de praktijk staan, sluit de praktijk de verwerkersvoorwaarden van die partijen zelf af. Leg dat vast.","Beschrijf de gegevens: NAW, cliëntnummer uit Vrumun, uitleenperiodes, betalingen. Benoem expliciet dat uit de huur van een bevalbad of TENS afgeleid kan worden dat iemand zwanger is, dus dat het om gezondheidsgegevens gaat.","Beschrijf je beveiligingsmaatregelen (bijlage): versleutelde verbinding, versleutelde opslag, MFA, audit log, backups in de EU, geen echte data in de testomgeving.","Neem op dat je alleen op instructie van de praktijk in productiedata kijkt, en alleen als dat nodig is voor een storing.","Neem een vrijwaringsclausule op: de praktijk vrijwaart jou voor aanspraken van derden en boetes, behalve bij opzet of bewuste roekeloosheid. Beperk je eigen aansprakelijkheid uit de verwerkersovereenkomst tot €0 of een symbolisch bedrag, voor zover wettelijk toegestaan.","Regel het einde: na beëindiging lever je data terug of verwijder je je toegang, op keuze van de praktijk."],
+  note:"Ook zonder betaling ben je verwerker in de zin van artikel 28 AVG zodra je toegang hebt tot productiedata. De overeenkomst beschermt jou net zo goed als de praktijk."},
+ {id:"A6",ph:"A",name:"Verwerkersovereenkomst getekend",s:"2026-10-12",e:"2026-10-12",deps:["A2"],ms:true,kind:"legal",
+  steps:["Stuur de definitieve versie naar Kirsten en Francois. Laat tekenen door iemand die de praktijk mag vertegenwoordigen.","Digitaal tekenen volstaat, bijvoorbeeld met een PDF en een getekende scan.","Bewaar de getekende versie op een plek die je over jaren nog terugvindt, los van de applicatie."],
+  note:"Zet geen echte cliëntgegevens in productie voordat deze mijlpaal is gehaald."},
+ {id:"A7",ph:"A",name:"Praktijk: privacyverklaring en verwerkingsregister bijwerken",s:"2026-10-14",e:"2026-10-23",deps:["A6"],kind:"practice",
+  steps:["De praktijk neemt de verhuuradministratie op in het verwerkingsregister: welke gegevens, doel, bewaartermijn, ontvangers.","De praktijk werkt de privacyverklaring op de website bij: verhuur van bevalbaden en TENS, digitale overeenkomst en facturen per e-mail.","De praktijk beoordeelt of een DPIA nodig is. Voor een kleine praktijk is de verwerking meestal niet grootschalig, maar die afweging moeten zij maken en vastleggen.","Jij levert de input: welke gegevens de app opslaat en welke partijen erbij betrokken zijn."],
+  note:"Dit is de verantwoordelijkheid van de praktijk als verwerkingsverantwoordelijke. Jouw rol is alleen informatie aanleveren."},
+
+ {id:"B1",ph:"B",name:"Render-account op naam van de praktijk",s:"2026-10-07",e:"2026-10-08",deps:["A1"],kind:"practice",
+  steps:["Laat Kirsten een Render-account aanmaken met een algemeen mailadres van de praktijk, niet een persoonlijk adres.","Laat de praktijk haar betaalgegevens (creditcard) en factuurgegevens invullen, zodat Render rechtstreeks aan de praktijk factureert.","Zet MFA aan op het account en bewaar de herstelcodes in de wachtwoordkluis van de praktijk.","De praktijk accepteert de Data Processing Addendum van Render (in de accountinstellingen of via de website van Render)."],
+  note:"De werkruimte op het Hobby-plan is gratis, je betaalt alleen per dienst. Het Hobby-plan heeft één login, zie B2 voor jouw toegang."},
+ {id:"B2",ph:"B",name:"Toegang voor Emiel regelen",s:"2026-10-08",e:"2026-10-08",deps:["B1"],kind:"dev",recNote:"€0 met gedeelde login",
+  steps:["Het gratis Hobby-plan van Render heeft één zitplaats: je kunt er geen teamleden aan toevoegen. Uitnodigen kan pas vanaf het Professional-plan.","Gekozen route: de praktijk deelt de login van het Render-account met jou via een wachtwoordmanager (bijvoorbeeld Bitwarden), inclusief de MFA-code als TOTP in de kluis. Zo houdt de praktijk het eigendom en kan zij het wachtwoord wijzigen als je stopt.","Log in via de gedeelde kluis, nooit via een opgeslagen wachtwoord in je eigen browser.","Alternatief als de praktijk liever aparte logins wil: Professional kost $19 per lid per maand. Met het account van de praktijk en jou zijn dat 2 leden, circa €33 per maand extra.","Leg de gekozen route vast in het overdrachtsdocument (G4)."],
+  note:"Het Hobby-plan staat bij nieuwe werkruimtes maximaal twee eigen domeinen toe. Dat is precies genoeg voor verhuur en rooster."},
+ {id:"B3",ph:"B",name:"DNS-beheerder achterhalen en toegang krijgen",s:"2026-10-07",e:"2026-10-09",deps:["A1"],kind:"dev",
+  steps:["Zoek hethartverloskunde.nl op via de whois van sidn.nl. Onder 'nameservers' en 'registrar' zie je wie het domein beheert.","Kijk welke DNS-records er nu zijn: het A-record van de website, MX-records van hun mail en een eventueel bestaand SPF-record (TXT, begint met v=spf1). Noteer ze.","Vraag de praktijk om een login bij die partij, of vraag hun webbouwer om de records uit E1, E2 en E4 voor je aan te maken.","Wijzig niets aan de bestaande records van website en mail."],
+  note:"Het domein zelf kost niets extra, de praktijk betaalt het al."},
+ {id:"B4",ph:"B",name:"Mailprovider-account op naam van de praktijk",s:"2026-10-08",e:"2026-10-09",deps:["A1"],kind:"practice",recNote:"€0 (gratis tot 300 mails per dag)",
+  steps:["Kies een Europese transactionele mailprovider, bijvoorbeeld Brevo (Frankrijk). Het gratis plan is ruim voldoende voor facturen en overeenkomsten.","Laat het account op naam van de praktijk aanmaken, met MFA.","Accepteer de verwerkersvoorwaarden van de provider in het account.","Maak een API-sleutel aan voor de applicatie en zet die direct in Render (D6), niet in de code of in een mail."],
+  note:"Verzenden via de eigen mailbox van de praktijk kan ook, maar is minder betrouwbaar en lastiger te koppelen."},
+ {id:"B5",ph:"B",name:"Offsite backup-opslag aanmaken",s:"2026-10-08",e:"2026-10-09",deps:["B1"],kind:"dev",rec:4,recNote:"±€4 p/m",
+  steps:["Laat de praktijk een Hetzner Storage Box BX11 bestellen (Duitsland, 1 TB). Dat is ruim meer dan nodig, maar het kleinste formaat.","Laat de praktijk de verwerkersovereenkomst van Hetzner afsluiten in de Hetzner-console.","Maak een aparte SSH-sleutel aan voor de backupjob, met alleen schrijftoegang tot een eigen map.","Noteer de toegangsgegevens in de wachtwoordkluis van de praktijk."],
+  note:"Render maakt zelf ook backups, maar een kopie buiten Render beschermt tegen een geblokkeerd account of een vergissing."},
+ {id:"B6",ph:"B",name:"Accounts gereed",s:"2026-10-09",e:"2026-10-09",deps:["B1","B2","B3","B4","B5"],ms:true,kind:"dev",
+  steps:["Controleer dat alle accounts op naam van de praktijk staan en dat de praktijk de rekeningen ontvangt.","Controleer dat MFA overal aan staat.","Controleer dat alle wachtwoorden en herstelcodes in de kluis van de praktijk staan, niet alleen bij jou."]},
+
+ {id:"C1",ph:"C",name:"Databasemigraties in plaats van reset bij deploy",s:"2026-10-12",e:"2026-10-14",deps:[],kind:"dev",
+  steps:["Haal de code weg die de database bij het opstarten leegmaakt of opnieuw vult. Dit is de oorzaak van het leeglopen bij elke update.","Zet een migratietool op (bijvoorbeeld Alembic bij Python, of Prisma of Knex bij Node) en maak een eerste migratie van het huidige schema.","Laat migraties automatisch draaien als pre-deploy-stap in Render, niet bij het opstarten van de app.","Haal de testgegevens (seed) uit de standaardopstart. Seed alleen op staging, via een aparte opdracht.","Test lokaal: deploy, maak data, deploy opnieuw, controleer dat de data er nog is."],
+  note:"Dit is de belangrijkste technische taak. Zonder deze stap verliest de praktijk bij elke update alle gegevens."},
+ {id:"C2",ph:"C",name:"Persoonlijke accounts en MFA",s:"2026-10-14",e:"2026-10-19",deps:["C1"],kind:"dev",
+  steps:["Verwijder het standaard-account admin@thart.nl met het testwachtwoord uit de code en de seed.","Maak gebruikersbeheer: een beheerder kan gebruikers uitnodigen, uitschakelen en het wachtwoord laten resetten.","Voeg MFA toe met een authenticator-app (TOTP), verplicht voor alle gebruikers.","Stel eisen aan wachtwoorden: minimaal 12 tekens, controle op bekende gelekte wachtwoorden.","Zorg dat wachtwoorden met een moderne hashfunctie worden opgeslagen (argon2 of bcrypt)."]},
+ {id:"C3",ph:"C",name:"Audit log van inzage en wijzigingen",s:"2026-10-19",e:"2026-10-21",deps:["C1"],kind:"dev",
+  steps:["Log wie wanneer een cliëntdossier opent, wijzigt, een document verstuurt of iets verwijdert.","Log geen inhoud van gegevens, alleen wie, wat, wanneer en welk dossier.","Maak het log alleen-lezen in de app en alleen zichtbaar voor de beheerder.","Bewaar het log bijvoorbeeld twee jaar en ruim ouder automatisch op."],
+  note:"Het audit log beschermt ook jou: het laat zien dat jij geen dossiers hebt ingezien zonder reden."},
+ {id:"C4",ph:"C",name:"E-mailkoppeling voor facturen en overeenkomsten",s:"2026-10-21",e:"2026-10-23",deps:["B4","C1"],kind:"dev",
+  steps:["Koppel de mailfunctie aan de API van de mailprovider uit B4.","Verstuur vanaf een adres van de praktijk, bijvoorbeeld verhuur@hethartverloskunde.nl, met antwoorden naar het gewone adres van de praktijk.","Stuur PDF's als bijlage, niet als publieke downloadlink.","Leg in het dossier vast wanneer welk document naar welk adres is verstuurd.","Zorg dat de staging-omgeving nooit naar echte adressen mailt, bijvoorbeeld door alle mail naar jouw eigen adres om te leiden."]},
+ {id:"C5",ph:"C",name:"Digitale ondertekening van de overeenkomst",s:"2026-10-26",e:"2026-10-28",deps:["C1"],kind:"dev",
+  steps:["Bouw een klik-akkoord: de cliënt opent een unieke, tijdelijke link, leest de overeenkomst en zet een vinkje plus naam.","Leg vast: tijdstempel, IP-adres, de exacte versie van de overeenkomst (bijvoorbeeld als hash) en het e-mailadres waar de link naartoe ging.","Maak na ondertekening een definitieve PDF met een ondertekeningsblok en sla die op in het dossier.","Laat de link na gebruik of na 14 dagen verlopen."],
+  note:"Voor een huurovereenkomst is een eenvoudige elektronische handtekening juridisch geldig. Een gekwalificeerde handtekening is niet nodig."},
+ {id:"C6",ph:"C",name:"Bewaartermijnen en verwijderfunctie",s:"2026-10-28",e:"2026-10-30",deps:["C1"],kind:"dev",
+  steps:["Spreek met de praktijk de bewaartermijnen af: facturen 7 jaar (fiscaal), cliëntgegevens zonder factuur bijvoorbeeld 1 jaar na de laatste uitleen, wachtlijst na afloop van de periode.","Bouw een functie die verlopen gegevens automatisch verwijdert of anonimiseert, met behoud van de facturen.","Bouw een handmatige verwijderfunctie voor een verzoek van een cliënt, die zichtbaar maakt wat er wegens de fiscale plicht moet blijven.","Bouw een export per cliënt voor een inzageverzoek."]},
+ {id:"C7",ph:"C",name:"Beveiligingsbasis",s:"2026-10-19",e:"2026-10-20",deps:["C2"],kind:"dev",
+  steps:["Stel security headers in: HSTS, Content-Security-Policy, X-Frame-Options, Referrer-Policy.","Voeg rate limiting toe op inloggen en wachtwoord resetten.","Laat sessies na bijvoorbeeld 30 minuten inactiviteit verlopen.","Controleer afhankelijkheden op bekende kwetsbaarheden (npm audit of pip-audit) en zet automatische meldingen aan in GitHub.","Zorg dat foutmeldingen in productie geen technische details tonen."]},
+ {id:"C8",ph:"C",name:"Roosterdashboard: zelfde aanpassingen doorvoeren",s:"2026-10-26",e:"2026-11-04",deps:["C2","C3"],kind:"dev",
+  steps:["Pas C1 tot en met C3 en C7 toe op het roosterdashboard.","Bepaal of het roosterdashboard persoonsgegevens van cliënten bevat. Zo ja, ook C6.","Overweeg één gedeelde loginomgeving voor beide apps, zodat de praktijk één account per persoon heeft.","Werk de handleiding bij."]},
+ {id:"C9",ph:"C",name:"Code klaar voor productie",s:"2026-11-04",e:"2026-11-04",deps:["C1","C2","C3","C4","C5","C6","C7","C8"],ms:true,kind:"dev",
+  steps:["Alle code staat in de hoofdbranch en is getagd als versie 1.0.","Er staat geen testaccount, testwachtwoord of seed-data meer in de productieconfiguratie.","De handleiding is bijgewerkt voor de nieuwe functies."]},
+
+ {id:"D1",ph:"D",name:"Productiedatabases aanmaken",s:"2026-10-12",e:"2026-10-12",deps:["B6"],kind:"dev",rec:11,recNote:"2 × $6 ≈ €10,40 + opslag",
+  steps:["Maak in Render twee PostgreSQL-instanties van het type Basic-256mb, één voor verhuur en één voor rooster.","Kies de regio Frankfurt (EU Central).","Kies 1 GB opslag per database, dat is ruim voldoende voor jaren verhuuradministratie. Opslag kost $0,30 per GB per maand.","Zet de toegang zo dat alleen de eigen Render-diensten verbinding kunnen maken, geen publieke toegang."],
+  note:"Betaalde Render-databases hebben automatische dagelijkse backups. De gratis variant verloopt na 30 dagen en is dus ongeschikt voor productie."},
+ {id:"D2",ph:"D",name:"Stagingdatabase aanmaken",s:"2026-10-12",e:"2026-10-12",deps:["B6"],kind:"dev",rec:5,recNote:"$6 ≈ €5",
+  steps:["Maak één Basic-256mb-instantie in Frankfurt voor staging.","Maak daarin twee databases aan, één per app. Zo betaal je maar één keer.","Vul staging alleen met verzonnen testgegevens."],
+  note:"Wil je dit besparen, dan kan staging ook op een gratis database die je elke maand opnieuw aanmaakt. Dat is goedkoper maar omslachtiger."},
+ {id:"D3",ph:"D",name:"Productie-webservices aanmaken",s:"2026-10-13",e:"2026-10-13",deps:["D1"],kind:"dev",rec:12,recNote:"2 × $7 ≈ €12",
+  steps:["Maak twee webservices van het type Starter in Frankfurt, gekoppeld aan de GitHub-repository en de productiebranch.","Zet automatische deploy uit voor productie. Je deployt handmatig, na een test op staging.","Stel de health check in op een eenvoudige statuspagina van de app.","Starter-diensten slapen niet, dus de wachttijd bij de eerste keer laden verdwijnt."]},
+ {id:"D4",ph:"D",name:"Staging-webservices aanmaken",s:"2026-10-13",e:"2026-10-13",deps:["D2"],kind:"dev",recNote:"€0 (gratis, met slaapstand)",
+  steps:["Maak twee gratis webservices voor staging, gekoppeld aan een aparte stagingbranch.","Zet automatische deploy aan op staging.","Accepteer dat staging na 15 minuten in slaapstand gaat; dat is voor testen geen probleem."]},
+ {id:"D5",ph:"D",name:"Omgevingsvariabelen en geheimen instellen",s:"2026-10-14",e:"2026-10-14",deps:["D3","D4"],kind:"dev",
+  steps:["Zet per omgeving de databaseverbinding, de mail-API-sleutel, een sessiesleutel en de app-URL als omgevingsvariabele in Render.","Gebruik voor productie en staging verschillende sleutels.","Controleer dat er geen geheimen in de GitHub-repository staan, ook niet in de geschiedenis. Zo wel: sleutel vervangen."]},
+ {id:"D6",ph:"D",name:"Automatische offsite backup",s:"2026-11-02",e:"2026-11-03",deps:["B5","D1"],kind:"dev",rec:1,recNote:"$1 minimum cronjob ≈ €1",
+  steps:["Maak een Render-cronjob die elke nacht een pg_dump maakt van beide productiedatabases.","Versleutel de dump (bijvoorbeeld met age of gpg) voordat hij het platform verlaat. De sleutel staat in de kluis van de praktijk.","Upload naar de Hetzner Storage Box via SFTP.","Bewaar 30 dagelijkse en 12 maandelijkse backups, ruim de rest automatisch op.","Laat de job bij een fout een mail sturen naar jou en de praktijk."]},
+ {id:"D7",ph:"D",name:"Uptime-monitoring",s:"2026-11-05",e:"2026-11-05",deps:["D3"],kind:"dev",recNote:"€0 (gratis plan)",
+  steps:["Maak een gratis account bij een monitoringdienst, bijvoorbeeld UptimeRobot, op naam van de praktijk.","Monitor beide productie-URL's elke 5 minuten.","Stuur meldingen naar jou en naar een adres van de praktijk."]},
+
+ {id:"E1",ph:"E",name:"Subdomein verhuur.hethartverloskunde.nl koppelen",s:"2026-10-26",e:"2026-10-26",deps:["B3","D3"],kind:"dev",
+  steps:["Ga in Render naar de productiedienst van het verhuurdashboard, Settings, Custom Domains, en voeg verhuur.hethartverloskunde.nl toe.","Render toont het doel voor het CNAME-record, iets als hart-verhuurdashboard-xxxx.onrender.com.","Maak bij de DNS-beheerder een CNAME-record aan: naam 'verhuur', waarde het adres van Render.","Laat de bestaande records van website en mail ongemoeid."]},
+ {id:"E2",ph:"E",name:"Subdomein rooster.hethartverloskunde.nl koppelen",s:"2026-10-26",e:"2026-10-26",deps:["B3","D3"],kind:"dev",
+  steps:["Herhaal E1 voor het roosterdashboard met de naam 'rooster'.","Dit is het tweede en laatste eigen domein dat het Hobby-plan toestaat. Een derde subdomein (bijvoorbeeld voor staging) kan dus niet zonder ander plan.","Staging kan op de onrender.com-adressen blijven; dat maakt meteen duidelijk welke omgeving test is."]},
+ {id:"E3",ph:"E",name:"Certificaten controleren",s:"2026-10-27",e:"2026-10-27",deps:["E1","E2"],kind:"dev",
+  steps:["Klik in Render bij beide domeinen op Verify. Dit kan van enkele minuten tot een paar uur duren.","Render vraagt automatisch een certificaat aan. Controleer in de browser dat het slotje er staat en dat er geen waarschuwing is.","Laat de app alle verkeer naar https doorsturen."]},
+ {id:"E4",ph:"E",name:"SPF, DKIM en DMARC instellen",s:"2026-10-27",e:"2026-10-28",deps:["B3","B4"],kind:"dev",
+  steps:["Kijk of er al een SPF-record is (TXT-record dat begint met v=spf1). Een domein mag er maar één hebben.","Bestaat er een, voeg dan het include-deel van de mailprovider toe aan het bestaande record. Maak geen tweede record.","Voeg de DKIM-records toe die de mailprovider opgeeft.","Voeg een DMARC-record toe, begin met p=none en een rapportageadres, en verscherp later naar quarantine.","Verifieer het domein in het account van de mailprovider."],
+  note:"Een tweede SPF-record maakt beide ongeldig en kan ervoor zorgen dat de gewone mail van de praktijk in spam belandt. Hier dus extra voorzichtig."},
+ {id:"E5",ph:"E",name:"Testmail controleren",s:"2026-10-29",e:"2026-10-29",deps:["E4","C4"],kind:"dev",
+  steps:["Verstuur vanaf staging een testfactuur naar een Gmail- en een Outlook-adres van jezelf.","Controleer in de berichtkop dat SPF, DKIM en DMARC 'pass' zijn.","Controleer dat de mail in de inbox komt en niet in spam.","Stuur ook een testmail via de gewone mailbox van de praktijk, om te zien dat die nog goed aankomt."]},
+ {id:"E6",ph:"E",name:"Domein en mail werkend",s:"2026-10-29",e:"2026-10-29",deps:["E3","E5"],ms:true,kind:"dev",
+  steps:["Beide subdomeinen tonen de app met een geldig certificaat.","Mail vanuit de app komt aan en de gewone mail van de praktijk werkt nog."]},
+
+ {id:"F1",ph:"F",name:"Uitrol naar staging en eigen test",s:"2026-11-05",e:"2026-11-06",deps:["C9","D5"],kind:"dev",
+  steps:["Rol versie 1.0 uit naar staging.","Loop zelf de complete cyclus door: cliënt aanmaken, reserveren, ophalen, retour, borgafrekening, alle vijf documenten, mail, ondertekening.","Test ook het TENS-proces en het roosterdashboard.","Test een update: deploy opnieuw en controleer dat er geen data verdwijnt."]},
+ {id:"F2",ph:"F",name:"Terugzettest van een backup",s:"2026-11-06",e:"2026-11-06",deps:["D6"],kind:"dev",
+  steps:["Haal de backup van afgelopen nacht van de Storage Box.","Ontsleutel hem en zet hem terug in de stagingdatabase.","Controleer dat de app werkt met de teruggezette data.","Noteer de stappen en de benodigde tijd in het overdrachtsdocument."],
+  note:"Een backup die nooit is teruggezet is geen backup. Herhaal deze test elk halfjaar."},
+ {id:"F3",ph:"F",name:"Acceptatietest door Kirsten",s:"2026-11-09",e:"2026-11-13",deps:["F1"],kind:"practice",
+  steps:["Maak voor Kirsten een persoonlijk account op staging, met MFA.","Vraag haar de gewone werkweek na te spelen met verzonnen cliënten, inclusief een reservering die te laat retour komt en een vies bad.","Vraag haar facturen en overeenkomsten inhoudelijk te controleren: bedragen, teksten, huisstijl.","Laat bevindingen in één lijst verzamelen, bijvoorbeeld in een gedeeld document of in een mail."]},
+ {id:"F4",ph:"F",name:"Bevindingen oplossen",s:"2026-11-16",e:"2026-11-18",deps:["F3"],kind:"dev",
+  steps:["Deel de bevindingen in: moet voor livegang, kan erna.","Los de moet-punten op en rol ze uit naar staging.","Laat Kirsten de opgeloste punten kort controleren."]},
+ {id:"F5",ph:"F",name:"Besluit livegang",s:"2026-11-19",e:"2026-11-19",deps:["A6","E6","F2","F4"],ms:true,kind:"dev",
+  steps:["Controleer: verwerkersovereenkomst getekend, domein en mail werken, backup terugzetten getest, acceptatietest akkoord.","Laat Kirsten schriftelijk (een mail is genoeg) bevestigen dat de praktijk akkoord is met de livegang.","Spreek een datum en tijd af voor de uitrol."],
+  note:"De schriftelijke acceptatie is relevant voor je aansprakelijkheid: de praktijk heeft de werking zelf getest en goedgekeurd."},
+
+ {id:"G1",ph:"G",name:"Uitrol naar productie met lege database",s:"2026-11-20",e:"2026-11-20",deps:["F5"],kind:"dev",
+  steps:["Rol versie 1.0 handmatig uit naar beide productiediensten.","Controleer dat de migraties hebben gedraaid en dat de database leeg is, zonder testgegevens.","Controleer de instellingen (huurprijzen, boetes, weken) en zet ze samen met Kirsten op de echte waarden."]},
+ {id:"G2",ph:"G",name:"Gebruikersaccounts voor de praktijk aanmaken",s:"2026-11-20",e:"2026-11-20",deps:["G1"],kind:"dev",
+  steps:["Maak een beheeraccount voor Kirsten en laat haar zelf de overige collega's uitnodigen.","Laat iedereen zelf het wachtwoord kiezen en MFA instellen.","Maak voor jezelf een apart beheeraccount, zodat in het audit log zichtbaar is wat jij doet."]},
+ {id:"G3",ph:"G",name:"Praktijk vult echte gegevens in",s:"2026-11-23",e:"2026-12-04",deps:["G2","A7"],kind:"practice",
+  steps:["De praktijk zet de voorraad (baden en TENS) en de lopende reserveringen over uit de Excel-planning.","De praktijk controleert na invoer de planner tegen de Excel en houdt de Excel nog een maand bij als terugvaloptie.","Jij helpt alleen op verzoek en kijkt alleen in data als dat nodig is voor een probleem."]},
+ {id:"G4",ph:"G",name:"Overdrachtsdocument opstellen",s:"2026-11-23",e:"2026-11-25",deps:["G1"],kind:"dev",
+  steps:["Beschrijf welke accounts er zijn, op wiens naam, en waar de logins staan.","Beschrijf wat de praktijk doet bij een storing: wie bellen, wat je wel en niet mag verwachten (geen vaste reactietijd).","Beschrijf hoe een backup wordt teruggezet.","Beschrijf hoe een andere ontwikkelaar het zou kunnen overnemen: repository, omgevingsvariabelen, deploystappen.","Geef het document aan de praktijk, zodat het niet alleen bij jou ligt."]},
+ {id:"G5",ph:"G",name:"Live",s:"2026-12-04",e:"2026-12-04",deps:["G3","G4"],ms:true,kind:"dev",
+  steps:["De praktijk werkt in de dashboards en de Excel-planning is overbodig.","De eerste maandfactuur van Render staat op naam van de praktijk."]},
+
+ {id:"I1",ph:"I",name:"Branches en beveiliging van de repository",s:"2026-12-07",e:"2026-12-07",deps:["G5"],kind:"dev",
+  steps:["Werk met twee vaste branches: main is productie, staging is de testomgeving. Wijzigingen komen altijd binnen via een eigen werkbranch en een pull request.","Zet branchbeveiliging aan op main en staging: geen directe push, een pull request is verplicht en de testworkflow uit I3 moet slagen.","Sta toe dat jouw token (I2) pull requests mag mergen, zodat Cowork dat kan doen zonder dat jij in GitHub hoeft te klikken.","Zet de repository op privé als dat nog niet zo is."]},
+ {id:"I2",ph:"I",name:"GitHub-token voor Cowork",s:"2026-12-07",e:"2026-12-07",deps:["I1"],kind:"dev",
+  steps:["Maak in GitHub onder Settings, Developer settings, een fine-grained personal access token aan met alleen toegang tot deze repository.","Geef alleen deze rechten: Contents lezen en schrijven, Pull requests lezen en schrijven, Actions lezen en schrijven, Workflows schrijven, Metadata lezen.","Zet de geldigheid op een jaar en zet een herinnering in je agenda om hem op tijd te vernieuwen.","Bewaar het token in je wachtwoordkluis. Geef het aan Cowork als bestand buiten de repository, nooit in de code of in een chatbericht."],
+  note:"Een token per repository beperkt de schade als het ooit lekt: het kan niets met je andere repositories."},
+ {id:"I3",ph:"I",name:"Testworkflow bij elke pull request",s:"2026-12-08",e:"2026-12-08",deps:["I1"],kind:"dev",recNote:"€0 (gratis binnen 2.000 minuten per maand)",
+  steps:["Maak een workflow in .github/workflows/ci.yml die bij elke pull request draait.","Laat hem de code controleren (lint), de tests draaien en afhankelijkheden scannen op bekende kwetsbaarheden.","Laat de tests draaien tegen een tijdelijke PostgreSQL-database in de workflow, nooit tegen staging of productie.","Maak deze workflow een verplichte check in de branchbeveiliging uit I1."]},
+ {id:"I4",ph:"I",name:"Deploy Hooks en productieworkflow",s:"2026-12-08",e:"2026-12-09",deps:["I3"],kind:"dev",
+  steps:["Kopieer in Render bij beide productiediensten de Deploy Hook (Settings, Deploy Hook). Dat is een geheime URL die een uitrol start.","Zet ze als secrets in GitHub, bijvoorbeeld RENDER_HOOK_VERHUUR en RENDER_HOOK_ROOSTER.","Laat automatische uitrol aan staan voor staging en uit voor productie.","Maak een workflow deploy-production.yml die alleen handmatig gestart kan worden. Hij zet een versietag op main en roept daarna beide Deploy Hooks aan.","Spreek af dat Cowork deze workflow pas start nadat jij in de chat expliciet akkoord hebt gegeven. Dat leg je vast in het draaiboek (I9)."],
+  note:"Hierdoor heeft Cowork voor het uitrollen geen toegang tot Render nodig. GitHub doet het werk, de Deploy Hook is het enige wat Render prijsgeeft."},
+ {id:"I5",ph:"I",name:"Terugdraaiworkflow",s:"2026-12-09",e:"2026-12-09",deps:["I4"],kind:"dev",
+  steps:["Maak een workflow rollback-production.yml die een eerdere versietag opnieuw uitrolt.","Spreek een regel af voor databasemigraties: alleen toevoegen, niets verwijderen of hernoemen in één stap. Verwijderen gebeurt pas een release later. Zo blijft de vorige versie werken op de nieuwe database en is terugdraaien veilig.","Test het terugdraaien een keer op staging."]},
+ {id:"I6",ph:"I",name:"Netwerkinstellingen van Cowork controleren",s:"2026-12-07",e:"2026-12-07",deps:[],kind:"dev",
+  steps:["Controleer in de organisatie-instellingen van Claude of api.render.com en het adres van de Render MCP-server zijn toegestaan.","GitHub staat er al in. Voeg alleen toe wat nodig is.","Pas het aan als organisatiebeheerder, of vraag het aan wie dat beheert."]},
+ {id:"I7",ph:"I",name:"Render MCP-connector in Cowork",s:"2026-12-10",e:"2026-12-10",deps:["I4","I6"],kind:"dev",
+  steps:["Maak in Render een aparte API-sleutel aan, alleen voor Cowork.","Controleer wat die sleutel kan. Kan Render hem niet beperken, dan heeft hij toegang tot het hele account, inclusief de verbindingsgegevens van de database.","Voeg de Render MCP-server toe als connector in Cowork met die sleutel.","Gebruik de connector alleen voor deploystatus, logs en servicestatus. Leg die beperking vast in het draaiboek (I9)."],
+  note:"Als de sleutel niet te beperken is, is de grens rond productiedata een afspraak en geen technische blokkade. Daarom moeten I8 en I9 goed zijn."},
+ {id:"I8",ph:"I",name:"Geen persoonsgegevens in logs",s:"2026-12-09",e:"2026-12-10",deps:["G5"],kind:"dev",
+  steps:["Loop alle logregels in beide apps na. Log alleen technische ID's, foutmeldingen en tijdstippen, nooit namen, adressen, e-mailadressen of cliëntnummers.","Voeg een filter toe dat bekende velden (naam, e-mail, telefoon, adres) uit foutmeldingen haalt voordat ze worden gelogd.","Zorg dat foutpagina's en stacktraces geen ingevulde formuliergegevens bevatten.","Controleer op staging met een opzettelijke fout wat er in de log terechtkomt."],
+  note:"Zodra Cowork logs met cliëntgegevens leest, wordt Anthropic subverwerker van de praktijk en moet dat in de verwerkersovereenkomst. Deze taak houdt dat buiten de deur."},
+ {id:"I9",ph:"I",name:"Draaiboek CLAUDE.md in de repository",s:"2026-12-10",e:"2026-12-10",deps:["I4","I5","I8"],kind:"dev",
+  steps:["Beschrijf de architectuur kort, met de twee apps, de omgevingen en de externe diensten.","Beschrijf de werkwijze: werkbranch, pull request, tests, merge naar staging, controle op staging, en alleen na expliciet akkoord van Emiel de productieworkflow.","Beschrijf hoe je terugdraait en de regel voor migraties uit I5.","Leg de harde regels vast: nooit productiedata openen of opvragen, nooit geheimen in code of chat, bugs reproduceren op staging met verzonnen gegevens.","Beschrijf hoe Dependabot-updates worden beoordeeld (I11)."]},
+ {id:"I10",ph:"I",name:"Eigen onderhoudsskill in Cowork",s:"2026-12-11",e:"2026-12-11",deps:["I9"],kind:"dev",
+  steps:["Maak met de skill-creator een skill voor dit project, bijvoorbeeld hart-onderhoud.","Laat de skill bij elke sessie het draaiboek uit de repository lezen, zodat de regels altijd uit één bron komen.","Neem de vaste routines op: een wijziging doorvoeren, uitrollen naar staging, uitrollen naar productie, terugdraaien, maandelijkse controle van updates en backups."]},
+ {id:"I11",ph:"I",name:"Dependabot voor updates",s:"2026-12-10",e:"2026-12-10",deps:["I3"],kind:"dev",recNote:"€0",
+  steps:["Zet Dependabot-beveiligingsupdates aan en voeg een .github/dependabot.yml toe met een wekelijkse controle.","Laat updates als pull request naar staging binnenkomen, zodat de tests ze eerst controleren.","Cowork beoordeelt en merget ze als de tests slagen, en rolt ze daarna mee met de eerstvolgende productie-uitrol."]},
+ {id:"I12",ph:"I",name:"Proefrun van begin tot eind",s:"2026-12-11",e:"2026-12-11",deps:["I7","I10","I11"],kind:"dev",
+  steps:["Laat Cowork een kleine, echte wijziging doorvoeren, bijvoorbeeld een tekst in een document.","Controleer dat de keten werkt zonder dat je zelf in GitHub of Render hoeft te komen: branch, pull request, tests, merge, staging, akkoord, productie.","Draai de wijziging daarna terug via de terugdraaiworkflow.","Noteer wat haperde en werk het draaiboek bij."]},
+ {id:"I13",ph:"I",name:"Onderhoud volledig vanuit Cowork",s:"2026-12-11",e:"2026-12-11",deps:["I12"],ms:true,kind:"dev",
+  steps:["Code aanpassen, mergen, uitrollen en terugdraaien gaat vanuit Cowork.","Je enige handeling is het akkoord voor productie in de chat.","Productiedata komt nooit in een sessie."]},
+ {id:"H1",ph:"H",name:"Oude testdiensten opruimen",s:"2026-12-07",e:"2026-12-07",deps:["G5"],kind:"dev",
+  steps:["Verwijder de oude testdienst hart-verhuurdashboard.onrender.com op jouw eigen account.","Verwijder de handleiding met het oude testwachtwoord uit je mails of pas die aan.","Controleer dat er nergens meer gegevens van de praktijk op jouw persoonlijke accounts staan."]},
+ {id:"H2",ph:"H",name:"Periodiek onderhoud",s:"2026-12-14",e:"2026-12-31",deps:["I13"],kind:"dev",span:true,
+  steps:["Eén keer per maand: de openstaande Dependabot-updates vanuit Cowork laten beoordelen en uitrollen, eerst via staging.","Eén keer per maand: controleren dat de nachtelijke backups slagen.","Elk halfjaar: een terugzettest (zie F2) en de accounts nalopen, oud-medewerkers uitschakelen.","Spreek met de praktijk af dat dit een inspanning is, geen garantie."]}
+];
+
+/* ---------- helpers ---------- */
+const byId = Object.fromEntries(T.map(t=>[t.id,t]));
+const D0 = new Date("2026-10-05T00:00:00");
+const DEND = new Date("2026-12-31T00:00:00");
+const DAYW = 13, ROWH = 40;
+const dayIdx = s => Math.round((new Date(s+"T00:00:00") - D0)/864e5);
+const totalDays = dayIdx("2026-12-31")+1;
+const fmt = s => new Date(s+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
+const eur = n => "€" + (Math.round(n*100)/100).toLocaleString("nl-NL",{minimumFractionDigits: n%1?2:0, maximumFractionDigits:2});
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- state ---------- */
+const LS = "wbs-hart-livegang-v1";
+let done = {};
+try { done = JSON.parse(localStorage.getItem(LS) || "{}") || {}; } catch(e) { done = {}; }
+let art = null, readOnly = false, saveTimer = null, saving = false, again = false;
+const syncEl = document.getElementById("sync");
+function saveLocal(){ try { localStorage.setItem(LS, JSON.stringify(done)); } catch(e){} }
+function setSync(t){ syncEl.textContent = t; }
+function push(){
+  saveLocal();
+  if(!art || readOnly) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flush, 1500);
+  setSync("Opslaan...");
+}
+async function flush(){
+  if(saving){ again = true; return; }
+  saving = true;
+  try{
+    await art.publish({"progress.json": JSON.stringify({done, updatedAt: Date.now()})});
+    setSync("Voortgang opgeslagen, iedereen met de link ziet deze stand.");
+  }catch(e){
+    const c = e && e.code;
+    if(c==="not_writer" || c==="not_granted" || c==="capability_disabled" || c==="not_declared"){
+      readOnly = true; setSync("Je bekijkt de actuele voortgang. Afvinken kan alleen de eigenaar."); render();
+    } else if(c==="conflict"){ setSync("Er is een nieuwere versie, de pagina laadt opnieuw."); }
+    else setSync("Opslaan lukte niet, je wijziging staat alleen in deze browser.");
+  }finally{
+    saving = false;
+    if(again){ again = false; flush(); }
+  }
+}
+(async ()=>{
+  try{
+    const r = await fetch("progress.json", {cache:"no-store"});
+    if(r.ok){ const j = await r.json(); if(j && j.done){ done = {...j.done}; saveLocal(); render(); } }
+  }catch(e){}
+  if(!window.claude || !window.claude.use){
+    setSync("Voortgang wordt in deze browser bewaard. Exporteer hem als progress.json om de gedeelde stand bij te werken.");
+    const b = document.getElementById("exportBtn"); b.hidden = false;
+    b.addEventListener("click", ()=>{
+      const blob = new Blob([JSON.stringify({done, updatedAt: Date.now()}, null, 2)], {type:"application/json"});
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "progress.json";
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    });
+    return;
+  }
+  try{
+    art = await window.claude.use("artifact");
+    if(art) setSync("Voortgang wordt gedeeld opgeslagen.");
+    else setSync("Je bekijkt de actuele voortgang. Afvinken kan alleen de eigenaar.");
+    if(!art){ readOnly = true; render(); }
+  }catch(e){}
+})();
+
+const isBlocked = t => t.deps.some(d=>!done[d]);
+function toggle(id){
+  if(readOnly) return;
+  const t = byId[id];
+  if(!done[id] && isBlocked(t)) return;
+  if(done[id]) delete done[id]; else done[id] = true;
+  push(); render();
+  if(dlg.open && current===id) fillModal(id);
+}
+
+/* ---------- costs ---------- */
+function costs(){
+  const once = T.filter(t=>t.once && !t.optional).reduce((a,t)=>a+t.once,0);
+  const rec = T.reduce((a,t)=>a+(t.rec||0),0);
+  return {once, rec};
+}
+function costTable(){
+  const rows = T.filter(t=>t.rec || t.once || t.recNote);
+  let h = "";
+  rows.forEach(t=>{
+    const v = t.once ? (t.onceNote||eur(t.once)) + (t.optional?" (optioneel)":"") : (t.recNote || eur(t.rec)+" p/m");
+    h += `<tr><td>${t.id} ${esc(t.name)}</td><td>${esc(v)}</td></tr>`;
+  });
+  const c = costs();
+  h += `<tr class="tot"><td>Doorlopend totaal</td><td>±${eur(c.rec)} p/m, ±${eur(c.rec*12)} p/j</td></tr>`;
+  h += `<tr class="tot"><td>Eenmalig</td><td>€0</td></tr>`;
+  document.getElementById("costTable").innerHTML = h;
+}
+
+/* ---------- render ---------- */
+const left = document.getElementById("left"), right = document.getElementById("right");
+let rowIndex = {}; // id -> row number
+function render(){
+  const W = totalDays*DAYW;
+  let L = `<div class="row head"><span>Taak</span><span>Kosten</span></div>`;
+  // calendar header
+  let weeks = "";
+  for(let d=0; d<totalDays; d+=7){
+    const dt = new Date(D0.getTime()+d*864e5);
+    const wk = isoWeek(dt);
+    const w = Math.min(7, totalDays-d)*DAYW;
+    weeks += `<div style="width:${w}px">wk ${wk}<br>${dt.toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}</div>`;
+  }
+  let R = `<div class="row head cal" style="width:${W}px"><div class="weeks">${weeks}</div></div>`;
+  let bg = "";
+  for(let d=0; d<totalDays; d++){
+    const dow = new Date(D0.getTime()+d*864e5).getDay();
+    if(dow===6) bg += `<div class="bgcol" style="left:${d*DAYW}px;width:${2*DAYW}px"></div>`;
+  }
+  let B = "", r = 0; rowIndex = {};
+  PHASES.forEach((p,pi)=>{
+    const ts = T.filter(t=>t.ph===p.id);
+    const nd = ts.filter(t=>done[t.id]).length;
+    const ps = Math.min(...ts.map(t=>dayIdx(t.s))), pe = Math.max(...ts.map(t=>dayIdx(t.e)));
+    L += `<div class="row phase"><span class="pn">${pi+1}</span>${esc(p.name)}<span class="pc">${nd}/${ts.length} klaar</span></div>`;
+    B += `<div class="brow phase"><div class="bar span" style="left:${ps*DAYW}px;width:${(pe-ps+1)*DAYW}px"></div></div>`;
+    r++;
+    ts.forEach(t=>{
+      rowIndex[t.id] = r;
+      const dn = !!done[t.id], bl = !dn && isBlocked(t);
+      const badges = [];
+      if(t.once) badges.push(`<span class="b cost">${eur(t.once)}${t.optional?"?":""}</span>`);
+      if(t.rec) badges.push(`<span class="b rec">${eur(t.rec)}/m</span>`);
+      if(t.kind==="practice") badges.push(`<span class="b who">praktijk</span>`);
+      if(bl) badges.push(`<span class="b wait">wacht</span>`);
+      L += `<div class="row task ${dn?"done":""} ${t.ms?"ms":""}">
+        <input type="checkbox" aria-label="${esc(t.name)} klaar" data-id="${t.id}" ${dn?"checked":""} ${(bl||readOnly)?"disabled":""}>
+        <span class="tid">${t.id}</span>
+        <button class="tname" data-open="${t.id}" title="${esc(t.name)}">${t.ms?"◆ ":""}${esc(t.name)}</button>
+        <span class="badges">${badges.join("")}</span></div>`;
+      const s = dayIdx(t.s), e = dayIdx(t.e);
+      if(t.ms){
+        B += `<div class="brow"><button class="ms-d ${dn?"done":""}" style="left:${(s+.5)*DAYW}px" data-open="${t.id}" aria-label="Mijlpaal ${esc(t.name)}"></button></div>`;
+      } else {
+        const cls = dn?"done":bl?"blocked":t.kind==="legal"?"legal":t.kind==="practice"?"practice":"";
+        B += `<div class="brow"><button class="bar ${cls}" style="left:${s*DAYW+1}px;width:${(e-s+1)*DAYW-2}px" data-open="${t.id}" aria-label="${esc(t.name)}, ${fmt(t.s)} tot ${fmt(t.e)}"></button></div>`;
+      }
+      r++;
+    });
+  });
+  left.innerHTML = L;
+  right.innerHTML = R + `<div class="bars" style="width:${W}px">${bg}${B}<svg class="links" id="links" width="${W}" height="${r*ROWH}"></svg></div>`;
+  drawLinks();
+  // header numbers
+  const n = T.filter(t=>done[t.id]).length;
+  const pct = Math.round(n/T.length*100);
+  document.getElementById("pct").textContent = pct+"%";
+  document.getElementById("pbar").style.width = pct+"%";
+  const c = costs();
+  document.getElementById("once").textContent = eur(c.once);
+  document.getElementById("rec").textContent = "±"+eur(c.rec);
+  document.getElementById("recy").textContent = "per maand, ±"+eur(c.rec*12)+" per jaar";
+}
+function drawLinks(hot){
+  const svg = document.getElementById("links"); if(!svg) return;
+  let p = "";
+  T.forEach(t=>t.deps.forEach(d=>{
+    const a = byId[d];
+    const x1 = (dayIdx(a.e)+1)*DAYW - (a.ms?DAYW/2-10:1), y1 = rowIndex[d]*ROWH+20;
+    const x2 = dayIdx(t.s)*DAYW + (t.ms?DAYW/2-10:1), y2 = rowIndex[t.id]*ROWH+20;
+    const mx = Math.max(x1+5, Math.min(x2-5, x1+8));
+    const isHot = hot && (hot===t.id || hot===d);
+    p += `<path class="${isHot?"hot":""}" d="M${x1},${y1} H${mx} V${y2} H${x2}"/>`;
+  }));
+  svg.innerHTML = p;
+}
+function isoWeek(d){
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-day);
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(),0,1));
+  return Math.ceil(((t-y0)/864e5+1)/7);
+}
+
+/* ---------- modal ---------- */
+const dlg = document.getElementById("dlg");
+let current = null;
+const KIND = {dev:"Emiel", legal:"Emiel, juridisch", practice:"Praktijk, met hulp van Emiel"};
+function fillModal(id){
+  const t = byId[id]; current = id;
+  const ph = PHASES.find(p=>p.id===t.ph);
+  const dn = !!done[id], bl = !dn && isBlocked(t);
+  document.getElementById("dMeta").textContent = `${t.id} · ${ph.name}${t.ms?" · mijlpaal":""}`.replace(/ · /g,", ");
+  document.getElementById("dTitle").textContent = t.name;
+  const dur = t.s===t.e ? fmt(t.s) : `${fmt(t.s)} tot ${fmt(t.e)}`;
+  const once = t.once ? (t.onceNote||eur(t.once)) + (t.optional?", optioneel":"") : "€0";
+  const rec = t.recNote || (t.rec ? eur(t.rec)+" per maand" : "€0");
+  const deps = t.deps.length ? `<div class="deps">${t.deps.map(d=>`<button class="dep ${done[d]?"ok":""}" data-open="${d}">${done[d]?"✓ ":""}${d} ${esc(byId[d].name)}</button>`).join("")}</div>` : `<p style="color:var(--muted);margin:0">Geen, kan direct starten.</p>`;
+  const next = T.filter(x=>x.deps.includes(id));
+  const nexts = next.length ? `<div class="deps">${next.map(x=>`<button class="dep ${done[x.id]?"ok":""}" data-open="${x.id}">${x.id} ${esc(x.name)}</button>`).join("")}</div>` : "";
+  document.getElementById("dBody").innerHTML = `
+    <div class="facts">
+      <div class="fact"><div class="k">Planning</div><div class="v">${dur}</div></div>
+      <div class="fact"><div class="k">Wie</div><div class="v">${KIND[t.kind]}</div></div>
+      <div class="fact"><div class="k">Eenmalig</div><div class="v">${esc(once)}</div></div>
+      <div class="fact"><div class="k">Doorlopend</div><div class="v">${esc(rec)}</div></div>
+    </div>
+    <h4>Stap voor stap</h4>
+    <ol class="steps">${t.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>
+    ${t.note?`<div class="callout">${esc(t.note)}</div>`:""}
+    <h4>Eerst klaar</h4>${deps}
+    ${nexts?`<h4>Hierna mogelijk</h4>${nexts}`:""}`;
+  const btn = document.getElementById("dToggle"), hint = document.getElementById("dHint");
+  btn.textContent = dn ? "Markeer als niet klaar" : (t.ms ? "Mijlpaal behaald" : "Markeer als klaar");
+  btn.className = "btn" + (dn?" undo":"");
+  btn.disabled = readOnly || bl;
+  hint.textContent = readOnly ? "Alleen-lezen." : bl ? "Vink eerst de voorgaande taken af." : dn ? "Afgevinkt." : "";
+  drawLinks(id);
+}
+function openModal(id){ fillModal(id); if(!dlg.open) dlg.showModal(); }
+document.addEventListener("click", e=>{
+  const o = e.target.closest("[data-open]");
+  if(o){ openModal(o.dataset.open); return; }
+});
+document.addEventListener("change", e=>{
+  if(e.target.matches(".task input[type=checkbox]")) toggle(e.target.dataset.id);
+});
+document.getElementById("dToggle").addEventListener("click", ()=>toggle(current));
+document.getElementById("dClose").addEventListener("click", ()=>dlg.close());
+dlg.addEventListener("click", e=>{ if(e.target===dlg) dlg.close(); });
+dlg.addEventListener("close", ()=>{ current=null; drawLinks(); });
+document.getElementById("showLinks").addEventListener("change", e=>{
+  document.getElementById("board").classList.toggle("hide-links", !e.target.checked);
+});
+
+costTable();
+render();
+</script>
+</body>
+</html>
