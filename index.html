@@ -55,11 +55,15 @@ h1{font-size:clamp(1.6rem,3.4vw,2.4rem);line-height:1.1;margin:0 0 8px;font-weig
 .legend i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
 
 .board{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
-.scroller{overflow-x:auto}
+.scroller{overflow:auto;max-height:calc(100vh - 140px);overscroll-behavior:contain;cursor:grab}
+.scroller.dragging{cursor:grabbing;user-select:none}
+.scroller::-webkit-scrollbar{height:12px;width:12px}
+.scroller::-webkit-scrollbar-thumb{background:var(--block);border-radius:6px;border:3px solid var(--surface)}
+.scroller::-webkit-scrollbar-track{background:var(--surface)}
 .grid{display:grid;grid-template-columns:minmax(380px,440px) auto;min-width:max-content}
 .left{position:sticky;left:0;z-index:3;background:var(--surface);border-right:1px solid var(--line)}
 .row{height:40px;display:flex;align-items:center;border-bottom:1px solid var(--line)}
-.head{height:48px;position:sticky;top:0;background:var(--surface);z-index:2}
+.head{height:48px;position:sticky;top:0;background:var(--surface);z-index:4}
 .left .head{padding:0 14px;font-size:.8rem;color:var(--muted);justify-content:space-between}
 
 .phase{background:var(--bg);font-weight:600;padding:0 14px;gap:10px;font-size:.92rem}
@@ -79,6 +83,14 @@ h1{font-size:clamp(1.6rem,3.4vw,2.4rem);line-height:1.1;margin:0 0 8px;font-weig
 .b.rec{background:var(--sage-soft);color:var(--sage)}
 .b.wait{background:var(--weekend);color:var(--muted)}
 .b.who{background:var(--amber-soft);color:var(--amber)}
+.b.sat{background:var(--ink);color:var(--surface)}
+.satcol{position:absolute;top:0;bottom:0;background:var(--amber-soft);opacity:.7;pointer-events:none}
+.sat-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:12px;padding:16px 20px;margin:0 0 18px}
+.sat-card h2{font-size:1.05rem;margin:0 0 4px}
+.sat-card p{color:var(--muted);font-size:.9rem;margin:0 0 10px;max-width:75ch}
+.sat-list{display:flex;flex-wrap:wrap;gap:8px}
+.sat-list button{border:1px solid var(--line);background:var(--bg);border-radius:16px;padding:4px 12px;font-size:.85rem;cursor:pointer}
+.sat-list button.ok{border-color:var(--sage);color:var(--sage)}
 
 .right{position:relative}
 .cal{display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:4px}
@@ -167,7 +179,7 @@ dialog::backdrop{background:rgba(18,26,31,.5)}
   <header class="top">
     <div>
       <h1>Livegang verhuur- en roosterdashboard Het Hart</h1>
-      <p class="lede">Van testserver naar productie op naam van de praktijk, onder hethartverloskunde.nl. Klik op een taak of mijlpaal voor het stappenplan, vink af wat klaar is.</p>
+      <p class="lede">Van testserver naar productie op naam van de praktijk, onder hethartverloskunde.nl. Klik op een taak of mijlpaal voor het stappenplan, vink af wat klaar is. Sleep de planning met de muis om door de tijdlijn te scrollen.</p>
       <div class="sync" id="sync">Voortgang wordt in deze browser bewaard.</div>
     </div>
     <div class="summary">
@@ -177,8 +189,14 @@ dialog::backdrop{background:rgba(18,26,31,.5)}
     </div>
   </header>
 
+  <section class="sat-card" aria-labelledby="satTitle">
+    <h2 id="satTitle">Zaterdag 10 oktober: accounts, betalingen en handtekening met Francois</h2>
+    <p>Alles wat op naam van de praktijk moet of met de zakelijke creditcard betaald wordt, doen we in één keer. Neem mee: de zakelijke creditcard, de telefoon voor de MFA-codes, de login van de domeinbeheerder van hethartverloskunde.nl en de geprinte verwerkersovereenkomst. Hetzner vraagt bij nieuwe klanten soms om extra verificatie, start daar dus als eerste.</p>
+    <div class="sat-list" id="satList"></div>
+  </section>
   <div class="toolbar">
     <label><input type="checkbox" id="showLinks" checked> Afhankelijkheden tonen</label>
+    <label><input type="checkbox" id="satOnly"> Alleen zaterdag 10 okt</label>
     <button id="exportBtn" class="btn undo" hidden style="padding:5px 12px;font-size:.85rem">Voortgang exporteren</button>
     <div class="legend">
       <span><i style="background:var(--water)"></i>Emiel</span>
@@ -190,7 +208,7 @@ dialog::backdrop{background:rgba(18,26,31,.5)}
   </div>
 
   <div class="board" id="board">
-    <div class="scroller">
+    <div class="scroller" id="scroller">
       <div class="grid">
         <div class="left" id="left"></div>
         <div class="right" id="right"></div>
@@ -252,29 +270,29 @@ const T = [
  {id:"A2",ph:"A",name:"Verwerkersovereenkomst opstellen",s:"2026-10-06",e:"2026-10-09",deps:["A1"],kind:"legal",
   steps:["Neem het Model Verwerkersovereenkomst van NL Digital als basis (gratis te downloaden). Dat model is breed geaccepteerd en past op deze situatie.","Vul in: de praktijk is verwerkingsverantwoordelijke, jij bent verwerker. Render, Brevo en Hetzner zijn subverwerkers, maar omdat de accounts op naam van de praktijk staan, sluit de praktijk de verwerkersvoorwaarden van die partijen zelf af. Leg dat vast.","Beschrijf de gegevens: NAW, cliëntnummer uit Vrumun, uitleenperiodes, betalingen. Benoem expliciet dat uit de huur van een bevalbad of TENS afgeleid kan worden dat iemand zwanger is, dus dat het om gezondheidsgegevens gaat.","Beschrijf je beveiligingsmaatregelen (bijlage): versleutelde verbinding, versleutelde opslag, MFA, audit log, backups in de EU, geen echte data in de testomgeving.","Neem op dat je alleen op instructie van de praktijk in productiedata kijkt, en alleen als dat nodig is voor een storing.","Neem een vrijwaringsclausule op: de praktijk vrijwaart jou voor aanspraken van derden en boetes, behalve bij opzet of bewuste roekeloosheid. Beperk je eigen aansprakelijkheid uit de verwerkersovereenkomst tot €0 of een symbolisch bedrag, voor zover wettelijk toegestaan.","Regel het einde: na beëindiging lever je data terug of verwijder je je toegang, op keuze van de praktijk."],
   note:"Ook zonder betaling ben je verwerker in de zin van artikel 28 AVG zodra je toegang hebt tot productiedata. De overeenkomst beschermt jou net zo goed als de praktijk."},
- {id:"A6",ph:"A",name:"Verwerkersovereenkomst getekend",s:"2026-10-12",e:"2026-10-12",deps:["A2"],ms:true,kind:"legal",
-  steps:["Stuur de definitieve versie naar Kirsten en Francois. Laat tekenen door iemand die de praktijk mag vertegenwoordigen.","Digitaal tekenen volstaat, bijvoorbeeld met een PDF en een getekende scan.","Bewaar de getekende versie op een plek die je over jaren nog terugvindt, los van de applicatie."],
+ {id:"A6",ph:"A",name:"Verwerkersovereenkomst getekend",s:"2026-10-10",e:"2026-10-10",sat:true,deps:["A2"],ms:true,kind:"legal",
+  steps:["Neem de definitieve versie zaterdag 10 oktober geprint of als PDF mee. Francois tekent als eigenaar van de praktijk, jij als verwerker.","Lukt printen niet, dan volstaat digitaal tekenen, bijvoorbeeld met een PDF en een getekende scan.","Bewaar de getekende versie op een plek die je over jaren nog terugvindt, los van de applicatie."],
   note:"Zet geen echte cliëntgegevens in productie voordat deze mijlpaal is gehaald."},
  {id:"A7",ph:"A",name:"Praktijk: privacyverklaring en verwerkingsregister bijwerken",s:"2026-10-14",e:"2026-10-23",deps:["A6"],kind:"practice",
   steps:["De praktijk neemt de verhuuradministratie op in het verwerkingsregister: welke gegevens, doel, bewaartermijn, ontvangers.","De praktijk werkt de privacyverklaring op de website bij: verhuur van bevalbaden en TENS, digitale overeenkomst en facturen per e-mail.","De praktijk beoordeelt of een DPIA nodig is. Voor een kleine praktijk is de verwerking meestal niet grootschalig, maar die afweging moeten zij maken en vastleggen.","Jij levert de input: welke gegevens de app opslaat en welke partijen erbij betrokken zijn."],
   note:"Dit is de verantwoordelijkheid van de praktijk als verwerkingsverantwoordelijke. Jouw rol is alleen informatie aanleveren."},
 
- {id:"B1",ph:"B",name:"Render-account op naam van de praktijk",s:"2026-10-07",e:"2026-10-08",deps:["A1"],kind:"practice",
+ {id:"B1",ph:"B",name:"Render-account op naam van de praktijk",s:"2026-10-10",e:"2026-10-10",sat:true,deps:["A1"],kind:"practice",
   steps:["Laat Kirsten een Render-account aanmaken met een algemeen mailadres van de praktijk, niet een persoonlijk adres.","Laat de praktijk haar betaalgegevens (creditcard) en factuurgegevens invullen, zodat Render rechtstreeks aan de praktijk factureert.","Zet MFA aan op het account en bewaar de herstelcodes in de wachtwoordkluis van de praktijk.","De praktijk accepteert de Data Processing Addendum van Render (in de accountinstellingen of via de website van Render)."],
   note:"De werkruimte op het Hobby-plan is gratis, je betaalt alleen per dienst. Het Hobby-plan heeft één login, zie B2 voor jouw toegang."},
- {id:"B2",ph:"B",name:"Toegang voor Emiel regelen",s:"2026-10-08",e:"2026-10-08",deps:["B1"],kind:"dev",recNote:"€0 met gedeelde login",
+ {id:"B2",ph:"B",name:"Toegang voor Emiel regelen",s:"2026-10-10",e:"2026-10-10",sat:true,deps:["B1"],kind:"dev",recNote:"€0 met gedeelde login",
   steps:["Het gratis Hobby-plan van Render heeft één zitplaats: je kunt er geen teamleden aan toevoegen. Uitnodigen kan pas vanaf het Professional-plan.","Gekozen route: de praktijk deelt de login van het Render-account met jou via een wachtwoordmanager (bijvoorbeeld Bitwarden), inclusief de MFA-code als TOTP in de kluis. Zo houdt de praktijk het eigendom en kan zij het wachtwoord wijzigen als je stopt.","Log in via de gedeelde kluis, nooit via een opgeslagen wachtwoord in je eigen browser.","Alternatief als de praktijk liever aparte logins wil: Professional kost $19 per lid per maand. Met het account van de praktijk en jou zijn dat 2 leden, circa €33 per maand extra.","Leg de gekozen route vast in het overdrachtsdocument (G4)."],
   note:"Het Hobby-plan staat bij nieuwe werkruimtes maximaal twee eigen domeinen toe. Dat is precies genoeg voor verhuur en rooster."},
- {id:"B3",ph:"B",name:"DNS-beheerder achterhalen en toegang krijgen",s:"2026-10-07",e:"2026-10-09",deps:["A1"],kind:"dev",
+ {id:"B3",ph:"B",name:"DNS-beheerder achterhalen en toegang krijgen",s:"2026-10-10",e:"2026-10-10",sat:true,deps:["A1"],kind:"dev",
   steps:["Zoek hethartverloskunde.nl op via de whois van sidn.nl. Onder 'nameservers' en 'registrar' zie je wie het domein beheert.","Kijk welke DNS-records er nu zijn: het A-record van de website, MX-records van hun mail en een eventueel bestaand SPF-record (TXT, begint met v=spf1). Noteer ze.","Vraag de praktijk om een login bij die partij, of vraag hun webbouwer om de records uit E1, E2 en E4 voor je aan te maken.","Wijzig niets aan de bestaande records van website en mail."],
   note:"Het domein zelf kost niets extra, de praktijk betaalt het al."},
- {id:"B4",ph:"B",name:"Mailprovider-account op naam van de praktijk",s:"2026-10-08",e:"2026-10-09",deps:["A1"],kind:"practice",recNote:"€0 (gratis tot 300 mails per dag)",
+ {id:"B4",ph:"B",name:"Mailprovider-account op naam van de praktijk",s:"2026-10-10",e:"2026-10-10",sat:true,deps:["A1"],kind:"practice",recNote:"€0 (gratis tot 300 mails per dag)",
   steps:["Kies een Europese transactionele mailprovider, bijvoorbeeld Brevo (Frankrijk). Het gratis plan is ruim voldoende voor facturen en overeenkomsten.","Laat het account op naam van de praktijk aanmaken, met MFA.","Accepteer de verwerkersvoorwaarden van de provider in het account.","Maak een API-sleutel aan voor de applicatie en zet die direct in Render (D6), niet in de code of in een mail."],
   note:"Verzenden via de eigen mailbox van de praktijk kan ook, maar is minder betrouwbaar en lastiger te koppelen."},
- {id:"B5",ph:"B",name:"Offsite backup-opslag aanmaken",s:"2026-10-08",e:"2026-10-09",deps:["B1"],kind:"dev",rec:4,recNote:"±€4 p/m",
+ {id:"B5",ph:"B",name:"Offsite backup-opslag aanmaken",s:"2026-10-10",e:"2026-10-10",sat:true,deps:["B1"],kind:"dev",rec:4,recNote:"±€4 p/m",
   steps:["Laat de praktijk een Hetzner Storage Box BX11 bestellen (Duitsland, 1 TB). Dat is ruim meer dan nodig, maar het kleinste formaat.","Laat de praktijk de verwerkersovereenkomst van Hetzner afsluiten in de Hetzner-console.","Maak een aparte SSH-sleutel aan voor de backupjob, met alleen schrijftoegang tot een eigen map.","Noteer de toegangsgegevens in de wachtwoordkluis van de praktijk."],
   note:"Render maakt zelf ook backups, maar een kopie buiten Render beschermt tegen een geblokkeerd account of een vergissing."},
- {id:"B6",ph:"B",name:"Accounts gereed",s:"2026-10-09",e:"2026-10-09",deps:["B1","B2","B3","B4","B5"],ms:true,kind:"dev",
+ {id:"B6",ph:"B",name:"Accounts gereed",s:"2026-10-10",e:"2026-10-10",sat:true,deps:["B1","B2","B3","B4","B5"],ms:true,kind:"dev",
   steps:["Controleer dat alle accounts op naam van de praktijk staan en dat de praktijk de rekeningen ontvangt.","Controleer dat MFA overal aan staat.","Controleer dat alle wachtwoorden en herstelcodes in de kluis van de praktijk staan, niet alleen bij jou."]},
 
  {id:"C1",ph:"C",name:"Databasemigraties in plaats van reset bij deploy",s:"2026-10-12",e:"2026-10-14",deps:[],kind:"dev",
@@ -487,7 +505,7 @@ function costTable(){
 
 /* ---------- render ---------- */
 const left = document.getElementById("left"), right = document.getElementById("right");
-let rowIndex = {}; // id -> row number
+let rowIndex = {}; let satOnly = false; // id -> row number
 function render(){
   const W = totalDays*DAYW;
   let L = `<div class="row head"><span>Taak</span><span>Kosten</span></div>`;
@@ -505,9 +523,11 @@ function render(){
     const dow = new Date(D0.getTime()+d*864e5).getDay();
     if(dow===6) bg += `<div class="bgcol" style="left:${d*DAYW}px;width:${2*DAYW}px"></div>`;
   }
+  bg += `<div class="satcol" style="left:${dayIdx("2026-10-10")*DAYW}px;width:${DAYW}px"></div>`;
   let B = "", r = 0; rowIndex = {};
   PHASES.forEach((p,pi)=>{
-    const ts = T.filter(t=>t.ph===p.id);
+    const ts = T.filter(t=>t.ph===p.id && (!satOnly || t.sat));
+    if(!ts.length) return;
     const nd = ts.filter(t=>done[t.id]).length;
     const ps = Math.min(...ts.map(t=>dayIdx(t.s))), pe = Math.max(...ts.map(t=>dayIdx(t.e)));
     L += `<div class="row phase"><span class="pn">${pi+1}</span>${esc(p.name)}<span class="pc">${nd}/${ts.length} klaar</span></div>`;
@@ -520,6 +540,7 @@ function render(){
       if(t.once) badges.push(`<span class="b cost">${eur(t.once)}${t.optional?"?":""}</span>`);
       if(t.rec) badges.push(`<span class="b rec">${eur(t.rec)}/m</span>`);
       if(t.kind==="practice") badges.push(`<span class="b who">praktijk</span>`);
+      if(t.sat) badges.push(`<span class="b sat">za 10/10</span>`);
       if(bl) badges.push(`<span class="b wait">wacht</span>`);
       L += `<div class="row task ${dn?"done":""} ${t.ms?"ms":""}">
         <input type="checkbox" aria-label="${esc(t.name)} klaar" data-id="${t.id}" ${dn?"checked":""} ${(bl||readOnly)?"disabled":""}>
@@ -539,6 +560,7 @@ function render(){
   left.innerHTML = L;
   right.innerHTML = R + `<div class="bars" style="width:${W}px">${bg}${B}<svg class="links" id="links" width="${W}" height="${r*ROWH}"></svg></div>`;
   drawLinks();
+  document.getElementById("satList").innerHTML = T.filter(t=>t.sat).map(t=>`<button data-open="${t.id}" class="${done[t.id]?"ok":""}">${done[t.id]?"✓ ":""}${t.id} ${esc(t.name)}</button>`).join("");
   // header numbers
   const n = T.filter(t=>done[t.id]).length;
   const pct = Math.round(n/T.length*100);
@@ -553,6 +575,7 @@ function drawLinks(hot){
   const svg = document.getElementById("links"); if(!svg) return;
   let p = "";
   T.forEach(t=>t.deps.forEach(d=>{
+    if(rowIndex[d]===undefined || rowIndex[t.id]===undefined) return;
     const a = byId[d];
     const x1 = (dayIdx(a.e)+1)*DAYW - (a.ms?DAYW/2-10:1), y1 = rowIndex[d]*ROWH+20;
     const x2 = dayIdx(t.s)*DAYW + (t.ms?DAYW/2-10:1), y2 = rowIndex[t.id]*ROWH+20;
@@ -616,12 +639,33 @@ document.getElementById("dToggle").addEventListener("click", ()=>toggle(current)
 document.getElementById("dClose").addEventListener("click", ()=>dlg.close());
 dlg.addEventListener("click", e=>{ if(e.target===dlg) dlg.close(); });
 dlg.addEventListener("close", ()=>{ current=null; drawLinks(); });
+document.getElementById("satOnly").addEventListener("change", e=>{ satOnly = e.target.checked; render(); });
 document.getElementById("showLinks").addEventListener("change", e=>{
   document.getElementById("board").classList.toggle("hide-links", !e.target.checked);
 });
 
 costTable();
 render();
+
+/* ---------- slepen om te scrollen ---------- */
+(function(){
+  const sc = document.getElementById("scroller");
+  let down = false, moved = false, sx = 0, sy = 0, sl = 0, st = 0;
+  sc.addEventListener("pointerdown", e=>{
+    if(e.pointerType !== "mouse" || e.button !== 0) return;
+    if(e.target.closest("input,label")) return;
+    down = true; moved = false; sx = e.clientX; sy = e.clientY; sl = sc.scrollLeft; st = sc.scrollTop;
+  });
+  window.addEventListener("pointermove", e=>{
+    if(!down) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if(!moved && Math.abs(dx) + Math.abs(dy) < 6) return;
+    moved = true; sc.classList.add("dragging");
+    sc.scrollLeft = sl - dx; sc.scrollTop = st - dy;
+  });
+  window.addEventListener("pointerup", ()=>{ down = false; sc.classList.remove("dragging"); });
+  sc.addEventListener("click", e=>{ if(moved){ e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+})();
 </script>
 </body>
 </html>
